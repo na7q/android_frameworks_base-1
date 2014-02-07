@@ -124,6 +124,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     private boolean mHasVibrator;
     private Profile mChosenProfile;
     private final boolean mShowSilentToggle;
+    private boolean showReboot;
 
     /**
      * @param context everything needs a context :(
@@ -159,9 +160,6 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
 
         mShowSilentToggle = SHOW_SILENT_TOGGLE && !mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_useFixedVolume);
-
-        // set the initial status of airplane mode toggle
-        mAirplaneState = getUpdatedAirplaneToggleState();
     }
 
     /**
@@ -169,7 +167,12 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
      * @param keyguardLocked True if keyguard is locked
      */
     public void showDialog(boolean keyguardLocked, boolean isDeviceProvisioned) {
-        mKeyguardLocked = keyguardLocked;
+       showDialog(keyguardLocked, isDeviceProvisioned, false);
+    }
+  
+    public void showDialog(boolean keyguardLocked, boolean isDeviceProvisioned, boolean mShowReboot) {
+  	showReboot = mShowReboot;        
+  	mKeyguardLocked = keyguardLocked;
         mDeviceProvisioned = isDeviceProvisioned;
         if (mDialog != null) {
             if (mUiContext != null) {
@@ -317,7 +320,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
 
         // next: reboot
         // only shown if enabled, enabled by default
-        boolean showReboot = Settings.System.getIntForUser(cr,
+        showReboot = Settings.System.getIntForUser(cr,
                 Settings.System.POWER_MENU_REBOOT_ENABLED, 1, UserHandle.USER_CURRENT) == 1;
         if (showReboot) {
             mItems.add(
@@ -1224,17 +1227,15 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
         }
     };
 
-    private ToggleAction.State getUpdatedAirplaneToggleState() {
-        return (Settings.Global.getInt(mContext.getContentResolver(),
-                    Settings.Global.AIRPLANE_MODE_ON, 0) == 1) ?
-                ToggleAction.State.On : ToggleAction.State.Off;
-    }
-
     private void onAirplaneModeChanged() {
         // Let the service state callbacks handle the state.
         if (mHasTelephony) return;
 
-        mAirplaneState = getUpdatedAirplaneToggleState();
+        boolean airplaneModeOn = Settings.Global.getInt(
+                mContext.getContentResolver(),
+                Settings.Global.AIRPLANE_MODE_ON,
+                0) == 1;
+        mAirplaneState = airplaneModeOn ? ToggleAction.State.On : ToggleAction.State.Off;
         mAirplaneModeOn.updateState(mAirplaneState);
     }
 
